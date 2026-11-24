@@ -2,6 +2,7 @@
 
 from importlib.metadata import PackageNotFoundError, version
 
+from .async_client import AsyncClient
 from .client import Client
 from .enums import (
     BrightLevel,
@@ -14,7 +15,7 @@ from .enums import (
 from .protocol import FrameError
 from .security import V3Error
 from .state import DishwasherStatus
-from .transport import V3Transport
+from .transport import AsyncV3Transport, V3Transport
 
 try:
     __version__ = version("midea-dishwasher-api")
@@ -22,6 +23,8 @@ except PackageNotFoundError:
     __version__ = "0.0.0+local"
 
 __all__ = [
+    "AsyncClient",
+    "AsyncV3Transport",
     "BrightLevel",
     "Client",
     "CycleState",

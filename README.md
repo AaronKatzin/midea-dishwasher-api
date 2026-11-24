@@ -46,6 +46,26 @@ with V3Transport(
 Control methods return nothing: the machine takes a few seconds to reflect a
 change. Call `query_status()` whenever fresh state is needed.
 
+The same calls exist as coroutines. `AsyncV3Transport` speaks the LAN V3
+session over asyncio, and `AsyncClient` has one awaited method per `Client`
+method:
+
+```python
+from midea_dishwasher_api import AsyncClient, AsyncV3Transport, Mode
+
+async with AsyncV3Transport(
+    host="192.168.5.100",
+    device_id=151732606394621,
+    token=bytes.fromhex("..."),  # 64 bytes
+    key=bytes.fromhex("..."),    # 32 bytes
+) as transport:
+    client = AsyncClient(send=transport)
+    status = await client.query_status()
+    await client.start_to_work(mode=Mode.ECO, extra_drying=True)
+```
+
+`AsyncClient` accepts any `async def send(frame: bytes) -> bytes`.
+
 ## API
 
 ### Client
