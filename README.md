@@ -103,6 +103,24 @@ The low-level codec (`assemble_frame`, `parse_frame`, `build_query`,
 `midea_dishwasher_api.protocol` and `midea_dishwasher_api.state` respectively —
 outside the public `__init__.py`.
 
+## LAN discovery
+
+Appliances answer a UDP broadcast on ports **6445** and **20086** (the same
+probe msmart-ng, midea-local and midea-beautiful-air send). Each reply yields
+the source IP, the numeric device id, the appliance type and the LAN protocol
+version (`2` or `3`), plus the TCP port to connect to:
+
+```python
+from midea_dishwasher_api import discover
+
+for device in discover(timeout=3, device_type=0xE1):
+    print(device.ip, device.device_id, hex(device.device_type), device.protocol, device.port)
+```
+
+Version 1 (XML) broadcasts are skipped: they do not carry the device id.
+On a host with more than one network, pass that network's broadcast address
+as `address`.
+
 ## Obtaining `token` and `key`
 
 They are per-device credentials issued by the Midea cloud. Use one of the
