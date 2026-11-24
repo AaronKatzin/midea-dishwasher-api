@@ -30,6 +30,7 @@ class DishwasherStatus:
     error_code: ErrorCode | int = ErrorCode.NONE
     left_time: int | None = None
     door_closed: bool = False
+    child_lock: bool = False
     bright_lack: bool = False
     bright: BrightLevel | int | None = None
     softwater_lack: bool = False

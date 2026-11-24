@@ -54,6 +54,10 @@ class Client:
         """Set the rinse-aid dosage level, rejecting levels outside 1-5."""
         self._control({"bright": int(BrightLevel(level))})
 
+    def set_child_lock(self, *, enabled: bool) -> None:
+        """Enable or disable the child lock."""
+        self._control({"child_lock": enabled})
+
     def _control(self, payload: ControlPayload) -> None:
         """Send a control frame and drop the acknowledgement."""
         self._send(build_control(payload))

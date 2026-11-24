@@ -15,6 +15,7 @@ class ControlPayload(TypedDict, total=False):
     mode: str
     additional: int
     bright: int
+    child_lock: bool
 
 
 SYNC = 0xAA
@@ -26,11 +27,21 @@ QUERY_BODY = b"\x00"
 
 _OPCODE_MAIN = 0x08
 _OPCODE_BRIGHT = 0x84
+_OPCODE_CHILD_LOCK = 0x83
+
+# midea-local MessageLock and the E1 Lua quoted in wuwentao/midea_ac_lan#709:
+# body[0] = 0x83, body[1] = 0x03 to lock and 0x04 to unlock.
+_CHILD_LOCK_ON = 0x03
+_CHILD_LOCK_OFF = 0x04
+_CHILD_LOCK_OPCODE_AT = 0
+_CHILD_LOCK_VALUE = 1
 
 _MAIN_OPCODE = 0
 _MAIN_MACHINE_STATE = 1
 _MAIN_MODE = 2
 _MAIN_ADDITIONAL = 3
+# Half load is not written here. A 76000228 capture reports `additional == 2`
+# for half load, but this byte is already extra drying (1). See the status decoder.
 
 _BRIGHT_OPCODE = 0
 _BRIGHT_LEVEL = 1
@@ -99,6 +110,8 @@ def build_control(payload: ControlPayload) -> bytes:
 
 def _encode_control_body(payload: ControlPayload) -> bytes:
     """Route the payload to the rinse-aid or the main control opcode."""
+    if "child_lock" in payload:
+        return _encode_child_lock(enabled=bool(payload["child_lock"]))
     if "bright" in payload:
         return _encode_bright(int(payload["bright"]))
     return _encode_main(
@@ -106,6 +119,14 @@ def _encode_control_body(payload: ControlPayload) -> bytes:
         mode=payload.get("mode"),
         additional=int(payload.get("additional", 0)),
     )
+
+
+def _encode_child_lock(*, enabled: bool) -> bytes:
+    """Encode the body of a child-lock command."""
+    body = bytearray(CONTROL_BODY_LEN)
+    body[_CHILD_LOCK_OPCODE_AT] = _OPCODE_CHILD_LOCK
+    body[_CHILD_LOCK_VALUE] = _CHILD_LOCK_ON if enabled else _CHILD_LOCK_OFF
+    return bytes(body)
 
 
 def _encode_bright(level: int) -> bytes:
