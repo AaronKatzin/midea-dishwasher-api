@@ -10,6 +10,7 @@ from ..enums import (
     ErrorCode,
     MachineState,
     Mode,
+    Operator,
     WashStage,
 )
 
@@ -29,6 +30,9 @@ class DishwasherStatus:
     wash_stage: WashStage | int | None = None
     error_code: ErrorCode | int = ErrorCode.NONE
     left_time: int | None = None
+    delay_remaining: int | None = None
+    operator: Operator | None = None
+    door_auto_open: bool = False
     door_closed: bool = False
     bright_lack: bool = False
     bright: BrightLevel | int | None = None

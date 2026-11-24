@@ -8,6 +8,7 @@ from .error_code import ErrorCode
 from .machine_state import MachineState
 from .mode import Mode
 from .msg_type import MsgType
+from .operator import Operator
 from .wash_stage import WashStage
 
 __all__ = [
@@ -17,5 +18,6 @@ __all__ = [
     "MachineState",
     "Mode",
     "MsgType",
+    "Operator",
     "WashStage",
 ]
