@@ -3,6 +3,13 @@
 from importlib.metadata import PackageNotFoundError, version
 
 from .client import Client
+from .cloud import (
+    CloudError,
+    DeviceCredentials,
+    MSmartHomeCloud,
+    NetHomePlusCloud,
+    udp_id,
+)
 from .enums import (
     BrightLevel,
     CycleState,
@@ -24,14 +31,19 @@ except PackageNotFoundError:
 __all__ = [
     "BrightLevel",
     "Client",
+    "CloudError",
     "CycleState",
+    "DeviceCredentials",
     "DishwasherStatus",
     "ErrorCode",
     "FrameError",
+    "MSmartHomeCloud",
     "MachineState",
     "Mode",
+    "NetHomePlusCloud",
     "V3Error",
     "V3Transport",
     "WashStage",
     "__version__",
+    "udp_id",
 ]
