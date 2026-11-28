@@ -4,6 +4,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 from .async_client import AsyncClient
 from .client import Client
+from .discovery import DiscoveredDevice, DiscoveryError, discover
 from .enums import (
     BrightLevel,
     CycleState,
@@ -29,6 +30,8 @@ __all__ = [
     "BrightLevel",
     "Client",
     "CycleState",
+    "DiscoveredDevice",
+    "DiscoveryError",
     "DishwasherStatus",
     "ErrorCode",
     "FrameError",
@@ -39,4 +42,5 @@ __all__ = [
     "V3Transport",
     "WashStage",
     "__version__",
+    "discover",
 ]
