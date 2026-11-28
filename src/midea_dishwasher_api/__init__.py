@@ -4,6 +4,13 @@ from importlib.metadata import PackageNotFoundError, version
 
 from .async_client import AsyncClient
 from .client import Client
+from .cloud import (
+    CloudError,
+    DeviceCredentials,
+    MSmartHomeCloud,
+    NetHomePlusCloud,
+    udp_id,
+)
 from .discovery import DiscoveredDevice, DiscoveryError, discover
 from .enums import (
     BrightLevel,
@@ -29,18 +36,23 @@ __all__ = [
     "AsyncV3Transport",
     "BrightLevel",
     "Client",
+    "CloudError",
     "CycleState",
+    "DeviceCredentials",
     "DiscoveredDevice",
     "DiscoveryError",
     "DishwasherStatus",
     "ErrorCode",
     "FrameError",
+    "MSmartHomeCloud",
     "MachineState",
     "Mode",
+    "NetHomePlusCloud",
     "Operator",
     "V3Error",
     "V3Transport",
     "WashStage",
     "__version__",
     "discover",
+    "udp_id",
 ]

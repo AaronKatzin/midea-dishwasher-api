@@ -158,9 +158,25 @@ as `address`.
 
 ## Obtaining `token` and `key`
 
-They are per-device credentials issued by the Midea cloud. Use one of the
-existing tools (`midea-msmart`, `midea-beautiful-air`, `midea-discover`) to
-extract them from your app account.
+They are per-device credentials issued by the Midea cloud. The optional
+`midea_dishwasher_api.cloud` module logs in to MSmartHome or NetHome Plus and
+calls `getToken` for the device id discovery reports. Pass your own app
+account; the library does not contain one.
+
+```python
+from midea_dishwasher_api import MSmartHomeCloud
+
+cloud = MSmartHomeCloud("you@example.com", "your-password")
+credentials = cloud.get_token(151732606394621)
+# credentials.token is 64 bytes, credentials.key is 32 bytes
+```
+
+`NetHomePlusCloud` is the same shape for a NetHome Plus account. `use_china_server=True`
+on `MSmartHomeCloud` talks to `mp-prod.smartmidea.net` instead. The UDP id is
+the SHA-256 fold msmart-ng sends; little-endian is tried first, then big-endian.
+
+The same credentials can still be copied from `midea-msmart`,
+`midea-beautiful-air` or `midea-discover`.
 
 ## Support
 
