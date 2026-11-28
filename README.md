@@ -86,6 +86,7 @@ async with AsyncV3Transport(
 | `set_delayed_start(mode, minutes, extra_drying=False, door_auto_open=None)` | Start a cycle after `minutes` |
 | `cancel_delayed_start(mode)` | Cancel a pending delayed start |
 | `set_bright(level: BrightLevel)` | Set the rinse-aid level (1–5) |
+| `set_child_lock(*, enabled)` | Enable or disable the child lock |
 
 `extra_drying` and `door_auto_open` are keyword-only. `minutes` is an integer from 1 to 1440 (24 hours), split into an hour byte and a minute byte on the wire.
 
@@ -109,6 +110,7 @@ Fields decoded from a response:
 - `operator: Operator | None` — `START` or `PAUSE` while the cycle is `ORDER` or `WORK`; `None` otherwise. A delayed start reports `PAUSE` until it begins, which is how the machine reports the run/pause bit
 - `door_auto_open: bool` — the current program's door auto-open flag
 - `door_closed: bool`
+- `child_lock: bool` — bit 4 of the flag byte (`body[5] & 0x10`), the same bit midea-local reads
 - `bright_lack: bool` — the rinse aid ran out
 - `bright: BrightLevel | int | None` — current rinse-aid level (1–5)
 - `softwater_lack: bool` — the salt for water softening ran out
@@ -118,6 +120,29 @@ Fields decoded from a response:
 
 `AUTO`, `INTENSIVE`, `NORMAL`, `ECO`, `GLASS`, `NINETY_MIN`, `ONE_HOUR`,
 `RAPID`, `SOAK`, `THREE_IN_ONE`, `HYGIENE`, `QUIET`, `PARTY`, `FRUIT`.
+
+## Child lock and half load
+
+`set_child_lock(enabled=True)` sends opcode `0x83` with byte 1 set to `0x03` (lock) or
+`0x04` (unlock), padded to the usual 38-byte control body. That layout is
+`MessageLock` in [midea-local](https://github.com/midea-lan/midea-local/blob/master/midealocal/devices/e1/message.py)
+and the E1 Lua quoted in
+[midea_ac_lan#709](https://github.com/wuwentao/midea_ac_lan/issues/709).
+Status uses the same flag byte this SDK already decodes for the door and the
+rinse-aid and salt warnings: bit `0x10` is the child lock.
+
+Half load is **not implemented**. Public sources do not agree on a command:
+
+- midea-local stores status byte 3 as an untyped `additional` integer and does
+  not send a half-load command.
+- On model 76000228, one Home Assistant capture in that same issue (13 Oct 2026)
+  reports `additional == 2` for half load and `0` for a full load. `wash_region`
+  stayed `3`.
+- This SDK already uses byte 3 for extra drying (`1` on, `0` off), from the
+  T_0000_E1 plugin captures. A value of `2` would also decode as extra drying.
+
+Confidence in a half-load command is low, so none is sent. The decoder records
+this as a TODO until a capture shows a byte that is not the extra-drying flag.
 
 ## Custom transport
 

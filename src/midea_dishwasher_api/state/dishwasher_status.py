@@ -34,6 +34,7 @@ class DishwasherStatus:
     operator: Operator | None = None
     door_auto_open: bool = False
     door_closed: bool = False
+    child_lock: bool = False
     bright_lack: bool = False
     bright: BrightLevel | int | None = None
     softwater_lack: bool = False

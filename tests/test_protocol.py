@@ -54,6 +54,17 @@ def test_power_off_frame() -> None:
     assert f[11] == 0x00
 
 
+def test_set_child_lock_uses_opcode_83() -> None:
+    locked = build_control({"child_lock": True})
+    unlocked = build_control({"child_lock": False})
+    assert locked[10] == 0x83
+    assert locked[11] == 0x03
+    assert unlocked[10] == 0x83
+    assert unlocked[11] == 0x04
+    assert all(byte == 0 for byte in locked[12:48])
+    assert len(locked) == 49
+
+
 def test_set_bright_uses_opcode_84() -> None:
     f = build_control({"bright": int(BrightLevel.L4)})
     assert f[10] == 0x84
@@ -201,6 +212,36 @@ def test_ack_only_frame() -> None:
     frame = assemble_frame(bytes(body), 0x02)
     s = decode_response(frame)
     assert s.ack_only is True
+
+
+def test_decode_response_child_lock_flag() -> None:
+    body = bytearray(46)
+    body[0] = 0x08
+    body[1] = 0x01
+    body[5] = 0x10 | 0x01
+    frame = assemble_frame(bytes(body), 0x03)
+
+    status = decode_response(frame)
+    assert status.child_lock is True
+    assert status.door_closed is True
+
+    body[5] = 0x01
+    status = decode_response(assemble_frame(bytes(body), 0x03))
+    assert status.child_lock is False
+
+
+def test_client_set_child_lock() -> None:
+    sent: list[bytes] = []
+
+    def capture(frame: bytes) -> bytes:
+        sent.append(frame)
+        return frame
+
+    client = Client(send=capture)
+    client.set_child_lock(enabled=True)
+    client.set_child_lock(enabled=False)
+    assert sent[0][10:12] == b"\x83\x03"
+    assert sent[1][10:12] == b"\x83\x04"
 
 
 def test_decode_response_salt_lack_flag() -> None:

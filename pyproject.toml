@@ -98,6 +98,9 @@ ignore = [
 # the only form that resolves under mypy and at runtime.
 "src/midea_dishwasher_api/protocol/*.py" = ["TID252"]
 "src/midea_dishwasher_api/state/*.py" = ["TID252"]
+# The half-load note in the status decoder is an intentional TODO, cited to the
+# capture it depends on. It stays until a command byte is separate from extra drying.
+"src/midea_dishwasher_api/state/decoder.py" = ["FIX002"]
 "src/midea_dishwasher_api/transport/*.py" = ["TID252"]
 "src/midea_dishwasher_api/discovery/*.py" = ["TID252"]
 # The socket has to accept a reply on whichever interface the broadcast used.

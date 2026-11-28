@@ -18,6 +18,12 @@ from .dishwasher_status import DishwasherStatus
 _OFFSET_CYCLE_STATE = 1
 _OFFSET_MODE = 2
 _OFFSET_EXTRA_DRYING = 3
+# TODO(https://github.com/wuwentao/midea_ac_lan/issues/709): half load has no
+# command. midea-local stores body[3] as untyped `additional` and sends nothing
+# for half load. That issue's 76000228 capture (2026-10-13) reports additional
+# 2 for half load and 0 for full, with wash_region left at 3. This SDK already
+# stores body[3] as extra_drying (1 or 0), so 2 would also read as extra drying.
+# Confidence is low; do not guess a command until a capture separates the two.
 _OFFSET_FLAGS4 = 4
 _OFFSET_FLAGS5 = 5
 _OFFSET_LEFT_TIME_LOW = 6
@@ -34,6 +40,8 @@ _FLAG_DOOR_CLOSED = 0x01
 _FLAG_BRIGHT_LACK = 0x02
 _FLAG_SALT_LACK = 0x04
 _FLAG_OPERATOR_START = 0x08
+# Same flag byte as midea-local E1GeneralMessageBody: child_lock = body[5] & 0x10.
+_FLAG_CHILD_LOCK = 0x10
 
 _OPERATOR_CYCLE_STATES = frozenset({CycleState.ORDER, CycleState.WORK})
 
@@ -87,7 +95,7 @@ def _decode_body(body: bytes, status: DishwasherStatus) -> None:
 
 
 def _decode_flags(body: bytes, status: DishwasherStatus) -> None:
-    """Fill door, supply and run/pause flags."""
+    """Fill door, supply, child-lock, and run/pause flags."""
     if (flags4 := _byte_at(body, _OFFSET_FLAGS4)) is not None:
         status.door_auto_open = bool(flags4 & _FLAG_DOOR_AUTO_OPEN)
 
@@ -96,6 +104,7 @@ def _decode_flags(body: bytes, status: DishwasherStatus) -> None:
     status.door_closed = bool(flags & _FLAG_DOOR_CLOSED)
     status.bright_lack = bool(flags & _FLAG_BRIGHT_LACK)
     status.softwater_lack = bool(flags & _FLAG_SALT_LACK)
+    status.child_lock = bool(flags & _FLAG_CHILD_LOCK)
     if status.cycle_state in _OPERATOR_CYCLE_STATES and flags5 is not None:
         status.operator = _decode_operator(flags5)
 

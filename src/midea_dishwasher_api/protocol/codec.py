@@ -18,6 +18,7 @@ class ControlPayload(TypedDict, total=False):
     delay_minutes: int
     door_auto_open: str
     operator: str
+    child_lock: bool
 
 
 SYNC = 0xAA
@@ -30,11 +31,21 @@ QUERY_BODY = b"\x00"
 _OPCODE_MAIN = 0x08
 _OPCODE_OPERATOR = 0x83
 _OPCODE_BRIGHT = 0x84
+_OPCODE_CHILD_LOCK = 0x83
+
+# midea-local MessageLock and the E1 Lua quoted in wuwentao/midea_ac_lan#709:
+# body[0] = 0x83, body[1] = 0x03 to lock and 0x04 to unlock.
+_CHILD_LOCK_ON = 0x03
+_CHILD_LOCK_OFF = 0x04
+_CHILD_LOCK_OPCODE_AT = 0
+_CHILD_LOCK_VALUE = 1
 
 _MAIN_OPCODE = 0
 _MAIN_MACHINE_STATE = 1
 _MAIN_MODE = 2
 _MAIN_ADDITIONAL = 3
+# Half load is not written here. A 76000228 capture reports `additional == 2`
+# for half load, but this byte is already extra drying (1). See the status decoder.
 # Hours then minutes, written only for a delayed start (work status 0x02).
 _MAIN_DELAY_HOURS = 7
 _MAIN_DELAY_MINUTES = 8
@@ -125,9 +136,11 @@ def build_control(payload: ControlPayload) -> bytes:
 
 
 def _encode_control_body(payload: ControlPayload) -> bytes:
-    """Route the payload to the operator, rinse-aid, or main control opcode."""
+    """Route the payload to the operator, child-lock, rinse-aid, or main control opcode."""
     if "operator" in payload:
         return _encode_operator(str(payload["operator"]))
+    if "child_lock" in payload:
+        return _encode_child_lock(enabled=bool(payload["child_lock"]))
     if "bright" in payload:
         return _encode_bright(int(payload["bright"]))
     return _encode_main(
@@ -137,6 +150,14 @@ def _encode_control_body(payload: ControlPayload) -> bytes:
         delay_minutes=payload.get("delay_minutes"),
         door_auto_open=payload.get("door_auto_open"),
     )
+
+
+def _encode_child_lock(*, enabled: bool) -> bytes:
+    """Encode the body of a child-lock command."""
+    body = bytearray(CONTROL_BODY_LEN)
+    body[_CHILD_LOCK_OPCODE_AT] = _OPCODE_CHILD_LOCK
+    body[_CHILD_LOCK_VALUE] = _CHILD_LOCK_ON if enabled else _CHILD_LOCK_OFF
+    return bytes(body)
 
 
 def _encode_bright(level: int) -> bytes:
