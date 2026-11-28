@@ -9,6 +9,7 @@ from .enums import (
     ErrorCode,
     MachineState,
     Mode,
+    Operator,
     WashStage,
 )
 from .protocol import FrameError
@@ -30,6 +31,7 @@ __all__ = [
     "FrameError",
     "MachineState",
     "Mode",
+    "Operator",
     "V3Error",
     "V3Transport",
     "WashStage",

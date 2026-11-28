@@ -9,6 +9,7 @@ from ..enums import (
     MachineState,
     Mode,
     MsgType,
+    Operator,
     WashStage,
 )
 from ..protocol import parse_frame
@@ -17,17 +18,24 @@ from .dishwasher_status import DishwasherStatus
 _OFFSET_CYCLE_STATE = 1
 _OFFSET_MODE = 2
 _OFFSET_EXTRA_DRYING = 3
+_OFFSET_FLAGS4 = 4
 _OFFSET_FLAGS5 = 5
 _OFFSET_LEFT_TIME_LOW = 6
+_OFFSET_DELAY_HOURS = 7
+_OFFSET_DELAY_MINUTES = 8
 _OFFSET_WASH_STAGE = 9
 _OFFSET_ERROR_CODE = 10
 _OFFSET_TEMPERATURE = 11
 _OFFSET_BRIGHT = 24
 _OFFSET_LEFT_TIME_HIGH = 32
 
+_FLAG_DOOR_AUTO_OPEN = 0x40
 _FLAG_DOOR_CLOSED = 0x01
 _FLAG_BRIGHT_LACK = 0x02
 _FLAG_SALT_LACK = 0x04
+_FLAG_OPERATOR_START = 0x08
+
+_OPERATOR_CYCLE_STATES = frozenset({CycleState.ORDER, CycleState.WORK})
 
 _ACK_OPCODE = 0x01
 
@@ -61,10 +69,7 @@ def _decode_body(body: bytes, status: DishwasherStatus) -> None:
     if (extra_drying := _byte_at(body, _OFFSET_EXTRA_DRYING)) is not None:
         status.extra_drying = bool(extra_drying)
 
-    flags = _byte_at(body, _OFFSET_FLAGS5) or 0
-    status.door_closed = bool(flags & _FLAG_DOOR_CLOSED)
-    status.bright_lack = bool(flags & _FLAG_BRIGHT_LACK)
-    status.softwater_lack = bool(flags & _FLAG_SALT_LACK)
+    _decode_flags(body, status)
 
     if (wash_stage := _byte_at(body, _OFFSET_WASH_STAGE)) is not None:
         status.wash_stage = WashStage.from_byte(wash_stage)
@@ -78,8 +83,29 @@ def _decode_body(body: bytes, status: DishwasherStatus) -> None:
     if (bright := _byte_at(body, _OFFSET_BRIGHT)) is not None:
         status.bright = BrightLevel.from_byte(bright)
 
+    _decode_timers(body, status)
+
+
+def _decode_flags(body: bytes, status: DishwasherStatus) -> None:
+    """Fill door, supply and run/pause flags."""
+    if (flags4 := _byte_at(body, _OFFSET_FLAGS4)) is not None:
+        status.door_auto_open = bool(flags4 & _FLAG_DOOR_AUTO_OPEN)
+
+    flags5 = _byte_at(body, _OFFSET_FLAGS5)
+    flags = flags5 or 0
+    status.door_closed = bool(flags & _FLAG_DOOR_CLOSED)
+    status.bright_lack = bool(flags & _FLAG_BRIGHT_LACK)
+    status.softwater_lack = bool(flags & _FLAG_SALT_LACK)
+    if status.cycle_state in _OPERATOR_CYCLE_STATES and flags5 is not None:
+        status.operator = _decode_operator(flags5)
+
+
+def _decode_timers(body: bytes, status: DishwasherStatus) -> None:
+    """Fill the timer that applies to the current cycle state."""
     if status.cycle_state == CycleState.WORK:
         status.left_time = _decode_left_time(body)
+    elif status.cycle_state == CycleState.ORDER:
+        status.delay_remaining = _decode_delay_remaining(body)
 
 
 def _decode_left_time(body: bytes) -> int:
@@ -87,6 +113,22 @@ def _decode_left_time(body: bytes) -> int:
     low = _byte_at(body, _OFFSET_LEFT_TIME_LOW) or 0
     high = _byte_at(body, _OFFSET_LEFT_TIME_HIGH)
     return (high << 8 | low) if high is not None else low
+
+
+def _decode_delay_remaining(body: bytes) -> int | None:
+    """Return minutes until a delayed start, from the hour and minute bytes."""
+    hours = _byte_at(body, _OFFSET_DELAY_HOURS)
+    minutes = _byte_at(body, _OFFSET_DELAY_MINUTES)
+    if hours is None or minutes is None:
+        return None
+    return hours * 60 + minutes
+
+
+def _decode_operator(flags5: int) -> Operator:
+    """Return start when the operator bit is set, otherwise pause."""
+    if flags5 & _FLAG_OPERATOR_START:
+        return Operator.START
+    return Operator.PAUSE
 
 
 def _byte_at(body: bytes, offset: int) -> int | None:

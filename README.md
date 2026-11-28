@@ -37,7 +37,11 @@ with V3Transport(
     print(status.bright_lack)     # is the rinse aid empty?
 
     client.power_on()
-    client.start_to_work(mode=Mode.ECO, extra_drying=True)
+    client.start_to_work(mode=Mode.ECO, extra_drying=True, door_auto_open=True)
+    client.pause_work()
+    client.resume_work()
+    client.set_delayed_start(mode=Mode.ECO, minutes=60, door_auto_open=True)
+    client.cancel_delayed_start(mode=Mode.ECO)
     client.set_bright(BrightLevel.L3)
     client.cancel_work()
     client.power_off()
@@ -55,11 +59,19 @@ change. Call `query_status()` whenever fresh state is needed.
 | `query_status() -> DishwasherStatus` | Read the current state |
 | `power_on()` | Power the machine on |
 | `power_off()` | Power it off |
-| `cancel_work()` | Cancel the cycle / return to idle |
-| `start_to_work(mode, extra_drying=False)` | Start a cycle |
+| `cancel_work()` | Cancel the running cycle / return to idle |
+| `start_to_work(mode, extra_drying=False, door_auto_open=None)` | Start a cycle |
+| `pause_work()` | Pause the running cycle |
+| `resume_work()` | Resume a paused cycle |
+| `set_delayed_start(mode, minutes, extra_drying=False, door_auto_open=None)` | Start a cycle after `minutes` |
+| `cancel_delayed_start(mode)` | Cancel a pending delayed start |
 | `set_bright(level: BrightLevel)` | Set the rinse-aid level (1–5) |
 
-`extra_drying` is keyword-only.
+`extra_drying` and `door_auto_open` are keyword-only. `minutes` is an integer from 1 to 1440 (24 hours), split into an hour byte and a minute byte on the wire.
+
+`door_auto_open` is tri-state. `None` (the default) leaves the machine's current setting unchanged (wire `0x00`). `True` enables it (`0x01`) and `False` disables it (`0x02`). It is a field of the start and delayed-start commands, not a command of its own.
+
+`cancel_work` does not cancel a delayed start. The machine ignores a plain cancel while a delay is pending; `cancel_delayed_start` sends the separate cancel-order status and includes the scheduled program byte. `pause_work` / `resume_work` use a different opcode (`0x83`) from power and program commands. Some models ignore pause.
 
 ### DishwasherStatus
 
@@ -73,6 +85,9 @@ Fields decoded from a response:
 - `wash_stage: WashStage | int | None` — `IDLE`, `PRE_WASH`, `MAIN_WASH`, `RINSE`, `DRY`, `FINISH`
 - `error_code: ErrorCode | int` — `NONE`, `WATER_SUPPLY`, `HEATING`, `OVERFLOW`, `WATER_VALVE`
 - `left_time: int | None` — minutes remaining (only set when `cycle_state == WORK`)
+- `delay_remaining: int | None` — minutes until a delayed start (only set when `cycle_state == ORDER`)
+- `operator: Operator | None` — `START` or `PAUSE` while the cycle is `ORDER` or `WORK`; `None` otherwise. A delayed start reports `PAUSE` until it begins, which is how the machine reports the run/pause bit
+- `door_auto_open: bool` — the current program's door auto-open flag
 - `door_closed: bool`
 - `bright_lack: bool` — the rinse aid ran out
 - `bright: BrightLevel | int | None` — current rinse-aid level (1–5)
